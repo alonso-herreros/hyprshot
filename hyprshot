@@ -106,6 +106,12 @@ function trim() {
     echo ${cropped}
 }
 
+function list_geometry () {
+	# [ "$1" = with_title ] && local append="\t\(.title)"
+	# [ "$1" = only_title ] && local append="\t\(.title)" || local info=""
+    hyprctl -j clients | jq -r '.[] | select(.workspace.id | contains('$(hyprctl -j monitors | jq -r 'map(.activeWorkspace.id) | join(",")')'))'
+}
+
 function save_geometry() {
     local geometry="${1}"
     local output=""
@@ -163,10 +169,15 @@ function begin_grab() {
         window)
             if [ $CURRENT -eq 1 ]; then
                 local geometry=`grab_active_window`
-            else
+            elif [ -z $SELECTED_WINDOW ]; then
                 local geometry=`grab_window`
+            else
+                local geometry=`grab_selected_window $SELECTED_WINDOW`
             fi
-	    geometry=`trim "${geometry}"`
+	        geometry=`trim "${geometry}"`
+            ;;
+        *)
+            local geometry=$option
             ;;
     esac
     if [ ${DELAY} -gt 0 ] 2>/dev/null; then
@@ -211,6 +222,12 @@ function grab_window() {
     slurp -r <<< "$boxes"
 }
 
+function grab_selected_window() {
+    local window=`hyprctl -j clients | jq -r '.[] | select(.title == "'$(echo $1)'")'`
+    Print "Capturing: %s\n" "${1}"
+    echo $window | jq -r '"\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"'
+}
+
 function grab_active_window() {
     local active_window=`hyprctl -j activewindow`
     local box=$(echo $active_window | jq -r '"\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"' | cut -f1,2 -d' ')
@@ -218,19 +235,58 @@ function grab_active_window() {
     echo "$box"
 }
 
+function prompt_options() {
+    visible_windows=$(list_geometry)
+
+    dmenu_text=$'Region\nActive monitor\nMonitor\nActive window\nWindow\n'
+    dmenu_text+=$(echo $visible_windows | jq -r '"Window:\t\(.title)"')
+
+    option_name=$(echo "$dmenu_text" | fuzzel -d)
+
+    case $option_name in
+        Active*) # Current monitor or window
+            CURRENT=1
+            ;;&
+        *[Mm]onitor)
+            OPTION=output
+            ;;
+        *[Ww]indow)
+            OPTION=window
+            ;;
+        Region)
+            OPTION=region
+            ;;
+        *)
+            parse_mode "$option_name"
+            ;;
+    esac
+}
+
 function parse_mode() {
     local mode="${1}"
 
-    case $mode in
-        window | region | output)
-            OPTION=$mode
-            ;;
+    case "$1" in
         active)
             CURRENT=1
+            shift
+            ;;&
+        window | region | output)
+            OPTION="$1"
+            shift
+            ;;
+        Window:*)
+            OPTION=window
+            SELECTED_WINDOW="$(echo "$1" | cut -f2)"
+            ;;
+        Monitor:*)
+            OPTION=output
+            SELECTED_WINDOW="$(echo "$1" | cut -f2)"
+            ;;
+        '')
             ;;
         *)
-            hyprctl monitors -j | jq -re '.[] | select(.name == "'$(echo $mode)'")' &>/dev/null
-            SELECTED_MONITOR=$mode
+            hyprctl monitors -j | jq -re '.[] | select(.name == "'$(echo "$1")'")' &>/dev/null
+            SELECTED_MONITOR="$1"
             ;;
     esac
 }
@@ -289,15 +345,9 @@ function args() {
     done
 
     if [ -z $OPTION ]; then
-        Print "A mode is required\n\nAvailable modes are:\n\toutput\n\tregion\n\twindow\n"
-        exit 2
+        prompt_options
     fi
 }
-
-if [ -z $1 ]; then
-    Help
-    exit
-fi
 
 CLIPBOARD=0
 DEBUG=0
