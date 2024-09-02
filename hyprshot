@@ -4,6 +4,11 @@ set -e
 
 readonly DMENU_COMMAND="fuzzel -d"
 
+readonly DUNST_TAG="screenshot"
+readonly CACHEDIR="$([ -z $XDG_CACHE_HOME ] && echo "$HOME/.cache" || echo "$XDG_CACHE_HOME")/hyprshot"
+readonly CAPTUREFILE="capture"
+readonly CAPTURE_FULLPATH="$CACHEDIR/$CAPTUREFILE"
+
 function Help() {
     cat <<EOF
 Usage: hyprshot [options ..] [-m [mode] ..] -- [command]
@@ -56,12 +61,25 @@ function send_notification() {
         return 0
     fi
 
-    local message=$([ $CLIPBOARD -eq 1 ] && \
-        echo "Image copied to the clipboard" || \
-        echo "Image saved in <i>${1}</i> and copied to the clipboard.")
-    notify-send "Screenshot saved" \
-                "${message}" \
-                -t "$NOTIF_TIMEOUT" -i "${1}" -a Hyprshot
+    local message=""
+    [ $CLIPBOARD -eq 1 ] && message+=$'Copied to the clipboard.\n'
+    [ $SAVE -eq 1 ] && message+="Saved in <i>$SAVE_FULLPATH</i>."
+
+    if [ $ACTIONS -eq 1 ]; then
+        action=$(notify-send "Screenshot captured" \
+            "${message}" \
+            -t "$NOTIF_TIMEOUT" -i "${1}" -a Hyprshot \
+            -h string:x-dunst-stack-tag:$DUNST_TAG \
+            -A copy="Copy to clipboard" \
+            -A default="Save" \
+            -A edit="Edit")
+        post_action "$action"
+    else
+        notify-send "Screenshot captured" \
+            "${message}" \
+            -t "$NOTIF_TIMEOUT" -i "${1}" -a Hyprshot \
+            -h string:x-dunst-stack-tag:$DUNST_TAG
+    fi
 }
 
 function trim() {
@@ -114,26 +132,59 @@ function list_geometry () {
     hyprctl -j clients | jq -r '.[] | select(.workspace.id | contains('$(hyprctl -j monitors | jq -r 'map(.activeWorkspace.id) | join(",")')'))'
 }
 
-function save_geometry() {
+function save_capture() {
+    SAVE=1
+    mkdir -p "$SAVEDIR"
+    cat "$CAPTURE_FULLPATH" > "$SAVE_FULLPATH"
+    Print "Saving in: %s\n" "$SAVE_FULLPATH"
+    echo "$SAVE_FULLPATH"
+    send_notification
+}
+
+function copy_capture() {
+    CLIPBOARD=1
+    wl-copy --type image/png < "$CAPTURE_FULLPATH"
+    echo "$CAPTURE_FULLPATH"
+    send_notification
+}
+
+function edit_capture() {
+    swappy -f "$CAPTURE_FULLPATH" -o "$SAVE_FULLPATH"
+    send_notification
+}
+
+function post_action() {
+    case "$1" in
+        copy)
+            copy_capture &>/dev/null
+            ;;
+        default | save)
+            # TODO: implement choosing through an xdg-desktop-portal file dialog
+            save_capture &>/dev/null
+            ;;
+        edit)
+            edit_capture &>/dev/null
+            ;;
+    esac
+}
+
+function capture() {
     local geometry="${1}"
-    local output=""
 
     if [ $RAW -eq 1 ]; then
         grim -g "${geometry}" -
         return 0
     fi
 
-    if [ $CLIPBOARD -eq 0 ]; then
-        mkdir -p "$SAVEDIR"
-        grim -g "${geometry}" "$SAVE_FULLPATH"
-        output="$SAVE_FULLPATH"
-        wl-copy --type image/png < "$output"
-        [ -z "$COMMAND" ] || {
-            "$COMMAND" "$output"
-        }
-    else
-        wl-copy --type image/png < <(grim -g "${geometry}" -)
-    fi
+    mkdir -p "$CACHEDIR"
+    grim -g "${geometry}" "$CAPTURE_FULLPATH"
+
+    [ $CLIPBOARD -eq 1 ] && copy_capture &>/dev/null
+    [ $SAVE -eq 1 ] && save_capture &>/dev/null
+
+    [ -z "$COMMAND" ] || {
+        "$COMMAND" "$output"
+    }
 
     send_notification $output
 }
@@ -185,7 +236,7 @@ function begin_grab() {
     if [ ${DELAY} -gt 0 ] 2>/dev/null; then
         sleep ${DELAY}
     fi
-    save_geometry "${geometry}"
+    capture "${geometry}"
 }
 
 function grab_output() {
@@ -294,7 +345,7 @@ function parse_mode() {
 }
 
 function args() {
-    local options=$(getopt -o hf:o:m:D:dszr:t: --long help,filename:,output-folder:,mode:,delay:,clipboard-only,debug,silent,freeze,raw,notif-timeout: -- "$@")
+    local options=$(getopt -o hf:o:m:D:caszr:t: --long help,filename:,output-folder:,mode:,delay:,save,clipboard,actions,debug,silent,freeze,raw,notif-timeout: -- "$@")
     eval set -- "$options"
 
     while true; do
@@ -305,10 +356,12 @@ function args() {
                 ;;
             -o | --output-folder)
                 shift;
+                SAVE=1
                 SAVEDIR=$1
                 ;;
             -f | --filename)
                 shift;
+                SAVE=1
                 FILENAME=$1
                 ;;
             -D | --delay)
@@ -319,8 +372,14 @@ function args() {
                 shift;
                 parse_mode $1
                 ;;
-            --clipboard-only)
+            --save)
+                SAVE=1
+                ;;
+            -c | --clipboard)
                 CLIPBOARD=1
+                ;;
+            -a | --actions)
+                ACTIONS=1
                 ;;
             -d | --debug)
                 DEBUG=1
@@ -351,7 +410,9 @@ function args() {
     fi
 }
 
+ACTIONS=0
 CLIPBOARD=0
+SAVE=0
 DEBUG=0
 SILENT=0
 RAW=0
@@ -365,5 +426,6 @@ FILENAME="$(date +'%Y-%m-%d-%H%M%S_hyprshot.png')"
 args $0 "$@"
 
 SAVE_FULLPATH="$SAVEDIR/$FILENAME"
-[ $CLIPBOARD -eq 0 ] && Print "Saving in: %s\n" "$SAVE_FULLPATH"
+[ $SAVE -eq 1 ] && Print "Saving in: %s\n" "$SAVE_FULLPATH"
 begin_grab $OPTION & checkRunning
+
