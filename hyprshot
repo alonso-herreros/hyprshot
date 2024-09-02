@@ -2,6 +2,8 @@
 
 set -e
 
+readonly DMENU_COMMAND="fuzzel -d"
+
 function Help() {
     cat <<EOF
 Usage: hyprshot [options ..] [-m [mode] ..] -- [command]
@@ -241,7 +243,7 @@ function prompt_options() {
     dmenu_text=$'Region\nActive monitor\nMonitor\nActive window\nWindow\n'
     dmenu_text+=$(echo $visible_windows | jq -r '"Window:\t\(.title)"')
 
-    option_name=$(echo "$dmenu_text" | fuzzel -d)
+    option_name=$(echo "$dmenu_text" | $DMENU_COMMAND)
 
     case $option_name in
         Active*) # Current monitor or window
