@@ -66,7 +66,7 @@ function send_notification() {
     if [ $ACTIONS -eq 1 ]; then
         action=$(notify-send "Screenshot captured" \
             "${message}" \
-            -t "$NOTIF_TIMEOUT" -i "${1}" -a Hyprshot \
+            -t "$NOTIF_TIMEOUT" -i "$CAPTURE_FULLPATH" -a Hyprshot \
             -h string:x-dunst-stack-tag:$DUNST_TAG \
             -A copy="Copy to clipboard" \
             -A default="Save" \
