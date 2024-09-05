@@ -203,13 +203,15 @@ function checkRunning() {
     done
 }
 
-function begin_grab() {
+function startup() {
     if [ $FREEZE -eq 1 ] && [ "$(command -v "hyprpicker")" ] >/dev/null 2>&1; then
         hyprpicker -r -z &
         sleep 0.2
-        HYPRPICKER_PID=$!
+        # HYPRPICKER_PID=$!
     fi
-    local option=$1
+}
+
+function begin_grab() {
     case $option in
         output)
             if [ $CURRENT -eq 1 ]; then
@@ -325,11 +327,9 @@ function parse_mode() {
     case "$1" in
         active)
             CURRENT=1
-            shift
-            ;;&
+            ;;
         window | region | output)
             OPTION="$1"
-            shift
             ;;
         Window:*)
             OPTION=window
@@ -338,8 +338,6 @@ function parse_mode() {
         Monitor:*)
             OPTION=output
             SELECTED_WINDOW="$(echo "$1" | cut -f2)"
-            ;;
-        '')
             ;;
         *)
             hyprctl monitors -j | jq -re '.[] | select(.name == "'$(echo "$1")'")' &>/dev/null
@@ -409,9 +407,6 @@ function args() {
         shift
     done
 
-    if [ -z $OPTION ]; then
-        prompt_options
-    fi
 }
 
 ACTIONS=0
@@ -425,9 +420,12 @@ CURRENT=0
 FREEZE=0
 [ -z "$XDG_PICTURES_DIR" ] && type xdg-user-dir &> /dev/null && XDG_PICTURES_DIR=$(xdg-user-dir PICTURES)
 FILENAME="$(date +'%Y-%m-%d-%H%M%S_hyprshot.png')"
-[ -z "$HYPRSHOT_DIR" ] && SAVEDIR=${XDG_PICTURES_DIR:=~} || SAVEDIR=${HYPRSHOT_DIR}
+[ -z "$HYPRSHOT_DIR" ] && SAVEDIR=${XDG_PICTURES_DIR:=~/Pictures} || SAVEDIR=${HYPRSHOT_DIR}
 
 args $0 "$@"
+startup
+
+[ -z $OPTION ] && prompt_options
 
 SAVE_FULLPATH="$SAVEDIR/$FILENAME"
 [ $SAVE -eq 1 ] && Print "Saving in: %s\n" "$SAVE_FULLPATH"
