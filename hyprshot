@@ -270,11 +270,9 @@ function parse_mode() {
     case "$1" in
         active)
             CURRENT=1
-            shift
-            ;;&
+            ;;
         window | region | output)
             OPTION="$1"
-            shift
             ;;
         Window:*)
             OPTION=window
@@ -283,8 +281,6 @@ function parse_mode() {
         Monitor:*)
             OPTION=output
             SELECTED_WINDOW="$(echo "$1" | cut -f2)"
-            ;;
-        '')
             ;;
         *)
             hyprctl monitors -j | jq -re '.[] | select(.name == "'$(echo "$1")'")' &>/dev/null
