@@ -68,10 +68,10 @@ function send_notification() {
             "${message}" \
             -t "$NOTIF_TIMEOUT" -i "$CAPTURE_FULLPATH" -a Hyprshot \
             -h string:x-dunst-stack-tag:$DUNST_TAG \
-            -A copy="Copy to clipboard" \
-            -A default="Save" \
+            -A default="Copy to clipboard" \
+            -A save="Save" \
             -A edit="Edit")
-        post_action "$action"
+        act_on_capture "$action"
     else
         notify-send "Screenshot captured" \
             "${message}" \
@@ -145,12 +145,12 @@ function edit_capture() {
     send_notification
 }
 
-function post_action() {
+function act_on_capture() {
     case "$1" in
-        copy)
+        default | copy)
             copy_capture &>/dev/null
             ;;
-        default | save)
+        save)
             # TODO: implement choosing through an xdg-desktop-portal file dialog
             save_capture &>/dev/null
             ;;
