@@ -2,8 +2,12 @@
 
 set -e
 
+<<<<<<< HEAD
 readonly DMENU_COMMAND="fuzzel -d"
 
+||||||| f95068d
+=======
+>>>>>>> feat/notification-actions
 readonly DUNST_TAG="screenshot"
 readonly CACHEDIR="$([ -z $XDG_CACHE_HOME ] && echo "$HOME/.cache" || echo "$XDG_CACHE_HOME")/hyprshot"
 readonly CAPTUREFILE="capture"
@@ -68,12 +72,12 @@ function send_notification() {
     if [ $ACTIONS -eq 1 ]; then
         action=$(notify-send "Screenshot captured" \
             "${message}" \
-            -t "$NOTIF_TIMEOUT" -i "${1}" -a Hyprshot \
+            -t "$NOTIF_TIMEOUT" -i "$CAPTURE_FULLPATH" -a Hyprshot \
             -h string:x-dunst-stack-tag:$DUNST_TAG \
-            -A copy="Copy to clipboard" \
-            -A default="Save" \
+            -A default="Copy to clipboard" \
+            -A save="Save" \
             -A edit="Edit")
-        post_action "$action"
+        act_on_capture "$action"
     else
         notify-send "Screenshot captured" \
             "${message}" \
@@ -153,12 +157,12 @@ function edit_capture() {
     send_notification
 }
 
-function post_action() {
+function act_on_capture() {
     case "$1" in
-        copy)
+        default | copy)
             copy_capture &>/dev/null
             ;;
-        default | save)
+        save)
             # TODO: implement choosing through an xdg-desktop-portal file dialog
             save_capture &>/dev/null
             ;;
