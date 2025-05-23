@@ -52,8 +52,8 @@ function Print() {
     if [ $DEBUG -eq 0 ]; then
         return 0
     fi
-    
-    1>&2 printf "$@" 
+
+    1>&2 printf "$@"
 }
 
 function send_notification() {
@@ -128,8 +128,8 @@ function trim() {
 }
 
 function list_geometry () {
-	# [ "$1" = with_title ] && local append="\t\(.title)"
-	# [ "$1" = only_title ] && local append="\t\(.title)" || local info=""
+    # [ "$1" = with_title ] && local append="\t\(.title)"
+    # [ "$1" = only_title ] && local append="\t\(.title)" || local info=""
     hyprctl -j clients | jq -r '.[] | select(.workspace.id | contains('$(hyprctl -j monitors | jq -r 'map(.activeWorkspace.id) | join(",")')'))'
 }
 
@@ -230,7 +230,7 @@ function begin_grab() {
             else
                 local geometry=$(grab_selected_window "${SELECTED_WINDOW}")
             fi
-	        geometry=$(trim "${geometry}")
+                geometry=$(trim "${geometry}")
             ;;
         *)
             local geometry=$OPTION
@@ -365,7 +365,7 @@ function args() {
                 FILENAME=$1
                 ;;
             -D | --delay)
-		shift;
+        shift;
                 DELAY=$1
                 ;;
             -m | --mode)
@@ -428,4 +428,3 @@ startup
 SAVE_FULLPATH="$SAVEDIR/$FILENAME"
 [ $SAVE -eq 1 ] && Print "Saving in: %s\n" "$SAVE_FULLPATH"
 begin_grab $OPTION & checkRunning
-
