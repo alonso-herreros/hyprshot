@@ -2,12 +2,8 @@
 
 set -e
 
-<<<<<<< HEAD
 readonly DMENU_COMMAND="fuzzel -d"
 
-||||||| f95068d
-=======
->>>>>>> feat/notification-actions
 readonly DUNST_TAG="screenshot"
 readonly CACHEDIR="$([ -z $XDG_CACHE_HOME ] && echo "$HOME/.cache" || echo "$XDG_CACHE_HOME")/hyprshot"
 readonly CAPTUREFILE="capture"
