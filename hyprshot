@@ -209,7 +209,7 @@ function startup() {
 }
 
 function begin_grab() {
-    case $option in
+    case $OPTION in
         output)
             if [ $CURRENT -eq 1 ]; then
                 local geometry=`grab_active_output`
@@ -233,7 +233,7 @@ function begin_grab() {
 	        geometry=`trim "${geometry}"`
             ;;
         *)
-            local geometry=$option
+            local geometry=$OPTION
             ;;
     esac
     if [ ${DELAY} -gt 0 ] 2>/dev/null; then
