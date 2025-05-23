@@ -316,6 +316,7 @@ function prompt_options() {
             parse_mode "$option_name"
             ;;
     esac
+    sleep 0.1; # Because sometimes it takes just a moment to fade out
 }
 
 function parse_mode() {
