@@ -72,9 +72,11 @@ function send_notification() {
             -h string:x-dunst-stack-tag:$DUNST_TAG \
             -A default="Save to file" \
             -A copy="Copy to clipboard" \
-            -A edit="Edit")
+            -A edit="Edit" \
+            2>/dev/null)
         [ "$action" = "default" ] && action="save"
-        act_on_capture "$action"
+        # If actions is invalid or none, act_on_capture fails and this stops
+        act_on_capture "$action" && send_notification
     else
         notify-send "Screenshot captured" \
             "${message}" \
@@ -139,34 +141,37 @@ function save_capture() {
     cat "$CAPTURE_FULLPATH" > "$SAVE_FULLPATH"
     Print "Saving in: %s\n" "$SAVE_FULLPATH"
     echo "$SAVE_FULLPATH"
-    send_notification
 }
 
 function copy_capture() {
     CLIPBOARD=1
     wl-copy --type image/png < "$CAPTURE_FULLPATH"
     echo "$CAPTURE_FULLPATH"
-    send_notification
 }
 
 function edit_capture() {
     swappy -f "$CAPTURE_FULLPATH" -o "$SAVE_FULLPATH"
-    send_notification
 }
 
 function act_on_capture() {
+    local acted=0
     case "$1" in
         save)
             # TODO: implement choosing through an xdg-desktop-portal file dialog
-            save_capture &>/dev/null
+            save_capture >/dev/null
+            acted=1
             ;;
         copy)
-            copy_capture &>/dev/null
+            copy_capture >/dev/null
+            acted=1
             ;;
         edit)
-            edit_capture &>/dev/null
+            edit_capture >/dev/null
+            acted=1
             ;;
     esac
+    # Return 0 if acted, 1 if action was invalid or none
+    [[ $acted -ne 0 ]] && return 0 || return 1
 }
 
 function capture() {
@@ -180,8 +185,8 @@ function capture() {
     mkdir -p "$CACHEDIR"
     grim -g "${geometry}" "$CAPTURE_FULLPATH"
 
-    [ $CLIPBOARD -eq 1 ] && copy_capture &>/dev/null
-    [ $SAVE -eq 1 ] && save_capture &>/dev/null
+    [ $CLIPBOARD -eq 1 ] && copy_capture >/dev/null
+    [ $SAVE -eq 1 ] && save_capture >/dev/null
 
     [ -z "$COMMAND" ] || {
         "$COMMAND" "$output"
