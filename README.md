@@ -5,7 +5,7 @@
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/Gustash/hyprshot?color=green&logo=github)](https://github.com/Gustash/hyprshot/releases/latest)
 
 > [!Warning]
-> This fork has been deprecated in favor of the new, rewritten and more featureful [Hyprcap](https://github.com/alonso-herreros/hyprcap)
+> This fork may soon be deprecated in favor of the new, rewritten and more featureful [Hyprcap](https://github.com/alonso-herreros/hyprcap)
 
 Hyprshot is an utility to easily take screenshot in Hyprland using your mouse.
 
